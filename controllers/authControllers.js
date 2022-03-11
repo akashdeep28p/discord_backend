@@ -1,6 +1,7 @@
 const userModel = require('../models/user')
 const bcrypt = require('bcryptjs')
 const {StatusCodes} = require('http-status-codes')
+const jwt = require('jsonwebtoken')
 
 const login = async (req, res) => {
     try {
@@ -14,14 +15,28 @@ const login = async (req, res) => {
 
         if (!isPasswordValid) return res.status(StatusCodes.UNAUTHORIZED).send('Invalid credentials')
 
-        res.status(StatusCodes.OK).json({user})
+        const payload = {
+            userId : user._id,
+            name : user.name,
+            email : user.email
+        }
+        const token = await jwt.sign(payload, process.env.JWT_SECRET, {expiresIn : '24h'})
+
+        res.status(StatusCodes.OK).json({
+            userDetails : {
+                name : user.name,
+                email : user.email
+            },
+            token
+        })
     }catch (err){
+        console.log(err)
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).send('Something went wrong...Please try again')
     }
 }
 
 const register = async (req, res) => {
-    try {
+    try {   
         const {name, email, password} = req.body
 
         const userExists = await userModel.exists({email: email.toLowerCase()})
@@ -36,7 +51,20 @@ const register = async (req, res) => {
             password: encryptedPassword,
         })
 
-        res.status(StatusCodes.CREATED).json({user})
+        const payload = {
+            userId : user._id,
+            name : user.name,
+            email : user.email
+        }
+        const token = await jwt.sign(payload, process.env.JWT_SECRET, {expiresIn : '24h'})
+
+        res.status(StatusCodes.OK).json({
+            userDetails : {
+                name : user.name,
+                email : user.email
+            },
+            token
+        })
     }catch (err){
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).send('Something went wrong...Please try again')
     }
